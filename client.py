@@ -18,7 +18,7 @@ class Client:
         login_info = "Login:%s" % self.username
         talk_info = "Talk:%s" % self.talker
         self.sock.send(login_info.encode("utf-8"))
-        time.sleep(2)
+        time.sleep(0.5)
         self.sock.send(talk_info.encode("utf-8"))
 
     def write(self):
@@ -37,7 +37,8 @@ class Client:
             data = self.sock.recv(512)
             if not data:
                 continue
-            print("from %s: %s" % (self.talker, data.decode("utf-8")))
+            print("\n%s  from %s: %s\nTalk to %s:" %
+                  (time.asctime(), self.talker, data.decode("utf-8"), self.talker))
 
     def run(self):
         w = threading.Thread(target=self.write, args=())
@@ -46,7 +47,17 @@ class Client:
         r.start()
 
 if __name__ == "__main__":
+    import configparser
+
     username = input("Enter your username: ")
     talker = input("Chat to: ")
-    client = Client("127.0.0.1", 50000, username, talker)
+
+    config = configparser.ConfigParser()
+    config.read("chat.conf")
+    addr = config["client"]["address"]
+    port = config["client"]["port"]
+
+    print("Initializing client . . . address: %s port: %s" % (addr, port))
+
+    client = Client(addr, int(port), username, talker)
     client.run()

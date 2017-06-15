@@ -47,6 +47,7 @@ class Server:
 
     def sender(self, new_sock, talker):
         while True:
+            # send data from buffer
             time.sleep(1)
             if talker not in self.buffer:
                 continue
@@ -62,5 +63,15 @@ class Server:
             threading.Thread(target=self.handler, args=(new_sock, addr)).start()
 
 if __name__ == "__main__":
-    serve = Server("127.0.0.1", 50000)
+    import configparser
+
+    # Read configure
+    config = configparser.ConfigParser()
+    config.read("chat.conf")
+    addr = config["server"]["address"]
+    port = config["server"]["port"]
+
+    print("Initializing server . . . address: %s port: %s" % (addr, port))
+
+    serve = Server(addr, int(port))
     serve.run()
