@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import socket
 import threading
 import time
@@ -8,29 +10,56 @@ class Server:
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind((listen_addr, port))
-        self.sock.listen(5)
+        self.sock.listen(15)
+        self.buffer = {}
+        self.buffer_lock = threading.Lock()
 
     def __del__(self):
         self.sock.close()
 
-    def tcplink(self, new_sock, addr):
+    def handler(self, new_sock, addr):
         print("New connection . . .", addr)
-        new_sock.send(b"Roger. ")
+        login_info = new_sock.recv(36)
+        login_info = login_info.decode("utf-8")
+        talk_to = new_sock.recv(36)
+        talk_info = talk_to.decode("utf-8")
+        print(login_info, " ", talk_info)
+        if not login_info.startswith("Login:") or not talk_info.startswith("Talk:"):
+            print("incorrect login format")
+            new_sock.close()
+            return
+        username = login_info[6:-1]
+        talker = talk_info[5:-1]
+        self.buffer[username] = []
+        print("user: %s login, talk to: %s" % (username, talker))
+        threading.Thread(target=self.sender, args=(new_sock, talker)).start()
         while True:
             data = new_sock.recv(512)
-            print(data.decode("utf-8"))
-            time.sleep(0.5)
-            if data == "exit" or not data:
+            info = data.decode("utf-8")
+            if info == "!exit" or not data:
                 break
-            new_sock.send(b"Receive your message.")
+            self.buffer_lock.acquire()
+            self.buffer[username].insert(0, info)
+            self.buffer_lock.release()
+            time.sleep(0.5)
         new_sock.close()
         print("Connection from ", addr, "closed")
+
+    def sender(self, new_sock, talker):
+        while True:
+            time.sleep(1)
+            if talker not in self.buffer:
+                continue
+            elif len(self.buffer[talker]) == 0:
+                continue
+            else:
+                info = self.buffer[talker].pop()
+                new_sock.send(info.encode("utf-8"))
 
     def run(self):
         while True:
             new_sock, addr = self.sock.accept()
-            t = threading.Thread(target=self.tcplink, args=(new_sock, addr))
-            t.start()
+            threading.Thread(target=self.handler, args=(new_sock, addr)).start()
 
 if __name__ == "__main__":
     serve = Server("127.0.0.1", 50000)
