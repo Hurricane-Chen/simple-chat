@@ -32,9 +32,10 @@ class Server:
         talker = talk_info[5:-1]
         self.buffer[username] = []
         print("user: %s login, talk to: %s" % (username, talker))
-        threading.Thread(target=self.sender, args=(new_sock, talker)).start()
+        rec_thread = threading.Thread(target=self.sender, args=(new_sock, talker))
+        rec_thread.start()
         while True:
-            data = new_sock.recv(512)
+            data = new_sock.recv(1024)
             info = data.decode("utf-8")
             if info == "!exit" or not data:
                 break
@@ -46,7 +47,7 @@ class Server:
         print("Connection from ", addr, "closed")
 
     def sender(self, new_sock, talker):
-        while True:
+        while not new_sock._close:
             # send data from buffer
             time.sleep(1)
             if talker not in self.buffer:
