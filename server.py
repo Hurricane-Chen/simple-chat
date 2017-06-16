@@ -30,7 +30,8 @@ class Server:
             return
         username = login_info[6:-1]
         talker = talk_info[5:-1]
-        self.buffer[username] = []
+        if username not in self.buffer:
+            self.buffer[username] = []
         print("user: %s login, talk to: %s" % (username, talker))
         rec_thread = threading.Thread(target=self.sender, args=(new_sock, talker))
         rec_thread.start()
@@ -47,7 +48,7 @@ class Server:
         print("Connection from ", addr, "closed")
 
     def sender(self, new_sock, talker):
-        while not new_sock._close:
+        while not new_sock._closed:
             # send data from buffer
             time.sleep(1)
             if talker not in self.buffer:
